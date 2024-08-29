@@ -3,17 +3,14 @@
  */
 export class LinkedHashEntry {
 	next;
-
 	previous;
-
-	id;
-
+	hashKey;
 	name;
 
 	constructor(name) {
 		this.next = null;
 		this.previous = null;
-		this.id = 0;
+		this.hashKey = 0;
 		this.name = name ? name : null;
 	}
 
@@ -33,95 +30,111 @@ export class LinkedHashEntry {
 }
 
 export class LinkedHashMapIterator {
-	hashMatch;
-
-	hash;
-
-	iterableHead;
-
+	foundEntryPointer;
+	lastProvidedHashKey;
+	currentIterationValue;
 	currentBucketIndex = 0;
-
 	buckets;
-
 	bucketCount;
 
 	/**
+	 * Constructs as `LinkedHashMapIterator`
+	 *
 	 * Note: Our index resolution expects `bucketCount` to be a power of 2. I
 	 * have validated that this is respected within the client code.
 	 *
 	 * @param {number} bucketCount
 	 */
 	constructor(bucketCount) {
-		this.buckets = [];
+		this.buckets = new Array(bucketCount);
 		this.bucketCount = bucketCount;
 
 		for (let i = 0; i < bucketCount; i++) {
 			this.buckets[i] = new LinkedHashEntry();
 
-			const bucket = this.buckets[i];
+			const sentinalEntry = this.buckets[i];
 
-			bucket.previous = bucket;
-			bucket.next = bucket;
+			sentinalEntry.previous = sentinalEntry;
+			sentinalEntry.next = sentinalEntry;
 		}
 	}
 
-	get(hash) {
-		this.hash = hash;
+	/**
+	 * Returns the least recently added element with the provided hash key. If
+	 * none can be found `null` is returned.
+	 *
+	 * @param {number} hashKey
+	 * @returns {LinkedHashEntry?}
+	 */
+	get(hashKey) {
+		this.lastProvidedHashKey = hashKey;
 
-		const bucket = this.buckets[hash & (this.bucketCount - 1)];
+		const sentinalEntry = this.buckets[hashKey & (this.bucketCount - 1)];
 
 		for (
-			this.hashMatch = bucket.previous;
-			this.hashMatch !== bucket;
-			this.hashMatch = this.hashMatch.previous
+			this.foundEntryPointer = sentinalEntry.previous;
+			this.foundEntryPointer !== sentinalEntry;
+			this.foundEntryPointer = this.foundEntryPointer.previous
 		) {
-			if (hash === this.hashMatch.id) {
-				const ret = this.hashMatch;
+			if (hashKey === this.foundEntryPointer.hashKey) {
+				const ret = this.foundEntryPointer;
 
-				this.hashMatch = this.hashMatch.previous;
+				this.foundEntryPointer = this.foundEntryPointer.previous;
 
 				return ret;
 			}
 		}
 
-		this.hashMatch = null;
+		this.foundEntryPointer = null;
 
 		return null;
 	}
 
-	getNextHashCollision() {
-		if (this.hashMatch === null) {
+	/**
+	 * Returns the next entry found with the key used in the previous call to
+	 * `get()`. If no more entries are found `null` is returned.
+	 *
+	 * @returns {LinkedHashEntry?}
+	 */
+	nextFoundEntry() {
+		if (this.foundEntryPointer === null) {
 			return null;
 		}
 
-		const node = this.buckets[this.hash & (this.bucketCount - 1)];
+		const sentinalEntry =
+			this.buckets[this.lastProvidedHashKey & (this.bucketCount - 1)];
 
-		while (node !== this.hashMatch) {
-			if (this.hash === this.hashMatch.id) {
-				const ret = this.hashMatch;
+		while (sentinalEntry !== this.foundEntryPointer) {
+			if (this.lastProvidedHashKey === this.foundEntryPointer.hashKey) {
+				const ret = this.foundEntryPointer;
 
-				this.hashMatch = this.hashMatch.previous;
+				this.foundEntryPointer = this.foundEntryPointer.previous;
 
 				return ret;
 			}
 
-			this.hashMatch = this.hashMatch.previous;
+			this.foundEntryPointer = this.foundEntryPointer.previous;
 		}
 
-		this.hashMatch = null;
+		this.foundEntryPointer = null;
 
 		return null;
 	}
 
-	countNodes() {
+	/**
+	 * Returns the count of entries in the hash map across all the buckets.
+	 *
+	 * @returns {number}
+	 */
+	entryCount() {
 		let count = 0;
 
 		for (let i = 0; i < this.bucketCount; i++) {
-			const currentNode = this.buckets[i];
-			let previousNode = currentNode.previous;
+			const sentinalEntry = this.buckets[i];
+			let currentEntry = sentinalEntry.previous;
 
-			while (currentNode !== previousNode) {
-				previousNode = previousNode.previous;
+			while (sentinalEntry !== currentEntry) {
+				currentEntry = currentEntry.previous;
 
 				count++;
 			}
@@ -130,50 +143,63 @@ export class LinkedHashMapIterator {
 		return count;
 	}
 
+	/**
+	 * Clears the entries in the hash map.
+	 */
 	clear() {
 		for (let i = 0; i < this.bucketCount; i++) {
-			const current = this.buckets[i];
+			const sentinalEntry = this.buckets[i];
 
 			while (true) {
-				const previous = current.previous;
+				const currentEntry = sentinalEntry.previous;
 
-				if (previous === current) {
+				if (currentEntry === sentinalEntry) {
 					break;
 				}
 
-				previous.popSelf();
+				currentEntry.popSelf();
 			}
 		}
 
-		this.hashMatch = null;
-		this.iterableHead = null;
+		this.foundEntry = null;
+		this.currentIterationValue = null;
 	}
 
-	set(hash, node) {
-		if (node.next !== null) {
-			node.popSelf();
+	/**
+	 * Sets a new entry in the hash map with the provided hash key.
+	 *
+	 * @param {number} hashKey
+	 * @param {LinkedHashEntry} entry
+	 */
+	set(hashKey, entry) {
+		if (entry.hasNext() !== null) {
+			entry.popSelf();
 		}
 
-		const index = hash & (this.bucketCount - 1);
-		const bucket = this.buckets[index];
+		const sentinalEntry = this.buckets[hashKey & (this.bucketCount - 1)];
 
-		node.previous = bucket;
-		node.next = bucket.next;
-		node.next.previous = node;
-		node.id = hash;
-		node.previous.next = node;
+		entry.previous = sentinalEntry;
+		entry.next = sentinalEntry.next;
+		entry.next.previous = entry;
+		entry.hashKey = hashKey;
+		entry.previous.next = entry;
 	}
 
-	next() {
+	/**
+	 * Returns the next least recently used entry.
+	 *
+	 * @returns {LinkedHashEntry?}
+	 */
+	nextEntry() {
 		let ret = null;
 
 		if (
 			this.currentBucketIndex > 0 &&
-			this.iterableHead !== this.buckets[this.currentBucketIndex - 1]
+			this.currentIterationValue !== this.buckets[this.currentBucketIndex - 1]
 		) {
-			ret = this.iterableHead;
+			ret = this.currentIterationValue;
 
-			this.iterableHead = ret.previous;
+			this.currentIterationValue = ret.previous;
 
 			return ret;
 		}
@@ -182,7 +208,7 @@ export class LinkedHashMapIterator {
 			ret = this.buckets[this.currentBucketIndex++].previous;
 
 			if (this.buckets[this.currentBucketIndex - 1] !== ret) {
-				this.iterableHead = ret.previous;
+				this.currentIterationValue = ret.previous;
 
 				return ret;
 			}
@@ -191,23 +217,45 @@ export class LinkedHashMapIterator {
 		return null;
 	}
 
+	/**
+	 * Returns the least recently added entry.
+	 *
+	 * @returns {LinkedHashEntry?}
+	 */
 	head() {
 		this.currentBucketIndex = 0;
 
-		return this.next();
+		return this.nextEntry();
 	}
 
-	count() {
+	/**
+	 * Returns the number of buckets available.
+	 *
+	 * @returns {number}
+	 */
+	size() {
 		return this.bucketCount;
 	}
 
+	/**
+	 * Adds the linked hash map's entries to the provided array, returning the
+	 * count of entries added to the array.
+	 *
+	 * @param {Array} result Array which will be populated with the current
+	 * entries.
+	 * @returns {number} The count of entries added to the array.
+	 */
 	toArray(result) {
 		let size = 0;
 
 		for (let i = 0; i < this.bucketCount; i++) {
-			const bucket = this.buckets[i];
+			const sentinalEntry = this.buckets[i];
 
-			for (let node = bucket.previous; node !== bucket; node = node.previous) {
+			for (
+				let node = sentinalEntry.previous;
+				node !== sentinalEntry;
+				node = node.previous
+			) {
 				result[size++] = node;
 			}
 		}

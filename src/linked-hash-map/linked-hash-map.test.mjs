@@ -7,8 +7,8 @@ describe("linked-hash-map", () => {
 		const expectedSize = 10;
 		const lhm = new LinkedHashMapIterator(expectedSize);
 
-		expect(lhm.count()).toEqual(expectedSize);
-		expect(lhm.countNodes()).toEqual(0);
+		expect(lhm.size()).toEqual(expectedSize);
+		expect(lhm.entryCount()).toEqual(0);
 	});
 
 	test("should return a value when added to the hash map", () => {
@@ -78,7 +78,7 @@ describe("linked-hash-map", () => {
 		lhm.set(2, new LinkedHashEntry("two-one"));
 		lhm.set(3, new LinkedHashEntry("three"));
 
-		expect(lhm.countNodes()).toEqual(4);
+		expect(lhm.entryCount()).toEqual(4);
 	});
 
 	test("should correctly clear the hash map when calling clear()", () => {
@@ -89,11 +89,11 @@ describe("linked-hash-map", () => {
 		lhm.set(2, new LinkedHashEntry("two-one"));
 		lhm.set(3, new LinkedHashEntry("three"));
 
-		expect(lhm.countNodes()).toEqual(4);
+		expect(lhm.entryCount()).toEqual(4);
 
 		lhm.clear();
 
-		expect(lhm.countNodes()).toEqual(0);
+		expect(lhm.entryCount()).toEqual(0);
 	});
 
 	test("should return least recently inserted element when calling head()", () => {
@@ -117,8 +117,8 @@ describe("linked-hash-map", () => {
 			lhm.set(i + 1, new LinkedHashEntry(item));
 		});
 
-		for (let entry = lhm.head(); entry !== null; entry = lhm.next()) {
-			const hash = entry.id;
+		for (let entry = lhm.head(); entry !== null; entry = lhm.nextEntry()) {
+			const hash = entry.hashKey;
 			const expectedValue = items[hash - 1];
 
 			expect(entry.name).toEqual(expectedValue);
@@ -134,18 +134,14 @@ describe("linked-hash-map", () => {
 		});
 
 		let i = -1;
-		for (
-			let entry = lhm.get(i);
-			entry !== null;
-			entry = lhm.getNextHashCollision()
-		) {
+		for (let entry = lhm.get(i); entry !== null; entry = lhm.nextFoundEntry()) {
 			const expectedValue = items[i++];
 
 			expect(entry.name).toEqual(expectedValue);
 		}
 	});
 
-	test("should place entries into provided array, starting from least recently inserted", () => {
+	test("should place entries into the provided array, starting from least recently inserted", () => {
 		const items = ["one", "two", "three", "four"];
 		const lhm = new LinkedHashMapIterator(8);
 
