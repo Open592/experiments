@@ -8,6 +8,7 @@ describe("linked-hash-map", () => {
 		const lhm = new LinkedHashMapIterator(expectedSize);
 
 		expect(lhm.count()).toEqual(expectedSize);
+		expect(lhm.countNodes()).toEqual(0);
 	});
 
 	test("should return a value when added to the hash map", () => {
