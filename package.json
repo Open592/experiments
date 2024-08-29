@@ -1,0 +1,18 @@
+{
+	"name": "open592-code-experiments",
+	"version": "0.0.1",
+	"description": "Experiments performed to better understand Runescape code",
+	"main": "src/index.mjs",
+	"scripts": {
+		"format": "biome format --write ./",
+		"format:ci": "biome format ./",
+		"test": "vitest"
+	},
+	"keywords": ["open592", "rsps", "runescape"],
+	"author": "Open592 Developer <uss@open592.com>",
+	"license": "BSD-2-Clause",
+	"devDependencies": {
+		"@biomejs/biome": "^1.8.3",
+		"vitest": "^2.0.5"
+	}
+}
