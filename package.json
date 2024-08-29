@@ -3,6 +3,10 @@
 	"version": "0.0.1",
 	"description": "Experiments performed to better understand Runescape code",
 	"main": "src/index.mjs",
+	"engines": {
+		"node": "22",
+		"npm": "10"
+	},
 	"scripts": {
 		"format": "biome format --write ./",
 		"format:ci": "biome format ./",
