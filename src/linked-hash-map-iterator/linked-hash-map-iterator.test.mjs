@@ -10,7 +10,7 @@ describe("linked-hash-map", () => {
 		const expectedSize = 10;
 		const lhm = new LinkedHashMapIterator(expectedSize);
 
-		expect(lhm.size()).toEqual(expectedSize);
+		expect(lhm.bucketCount()).toEqual(expectedSize);
 		expect(lhm.entryCount()).toEqual(0);
 	});
 

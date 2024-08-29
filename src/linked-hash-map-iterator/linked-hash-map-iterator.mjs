@@ -30,9 +30,9 @@ export class LinkedHashEntry {
 }
 
 export class LinkedHashMapIterator {
-	foundEntryPointer;
+	nextFoundEntryPointer;
 	lastProvidedHashKey;
-	currentIterationValue;
+	nextEntryPointer;
 	currentBucketIndex = 0;
 	buckets;
 	bucketCount;
@@ -43,13 +43,13 @@ export class LinkedHashMapIterator {
 	 * Note: Our index resolution expects `bucketCount` to be a power of 2. I
 	 * have validated that this is respected within the client code.
 	 *
-	 * @param {number} bucketCount
+	 * @param {number} size
 	 */
-	constructor(bucketCount) {
-		this.buckets = new Array(bucketCount);
-		this.bucketCount = bucketCount;
+	constructor(size) {
+		this.buckets = new Array(size);
+		this.bucketCount = size;
 
-		for (let i = 0; i < bucketCount; i++) {
+		for (let i = 0; i < size; i++) {
 			this.buckets[i] = new LinkedHashEntry();
 
 			const sentinalEntry = this.buckets[i];
@@ -72,20 +72,20 @@ export class LinkedHashMapIterator {
 		const sentinalEntry = this.buckets[hashKey & (this.bucketCount - 1)];
 
 		for (
-			this.foundEntryPointer = sentinalEntry.previous;
-			this.foundEntryPointer !== sentinalEntry;
-			this.foundEntryPointer = this.foundEntryPointer.previous
+			this.nextFoundEntryPointer = sentinalEntry.previous;
+			this.nextFoundEntryPointer !== sentinalEntry;
+			this.nextFoundEntryPointer = this.nextFoundEntryPointer.previous
 		) {
-			if (hashKey === this.foundEntryPointer.hashKey) {
-				const ret = this.foundEntryPointer;
+			if (hashKey === this.nextFoundEntryPointer.hashKey) {
+				const ret = this.nextFoundEntryPointer;
 
-				this.foundEntryPointer = this.foundEntryPointer.previous;
+				this.nextFoundEntryPointer = this.nextFoundEntryPointer.previous;
 
 				return ret;
 			}
 		}
 
-		this.foundEntryPointer = null;
+		this.nextFoundEntryPointer = null;
 
 		return null;
 	}
@@ -97,26 +97,26 @@ export class LinkedHashMapIterator {
 	 * @returns {LinkedHashEntry?}
 	 */
 	nextFoundEntry() {
-		if (this.foundEntryPointer === null) {
+		if (this.nextFoundEntryPointer === null) {
 			return null;
 		}
 
 		const sentinalEntry =
 			this.buckets[this.lastProvidedHashKey & (this.bucketCount - 1)];
 
-		while (sentinalEntry !== this.foundEntryPointer) {
-			if (this.lastProvidedHashKey === this.foundEntryPointer.hashKey) {
-				const ret = this.foundEntryPointer;
+		while (sentinalEntry !== this.nextFoundEntryPointer) {
+			if (this.lastProvidedHashKey === this.nextFoundEntryPointer.hashKey) {
+				const ret = this.nextFoundEntryPointer;
 
-				this.foundEntryPointer = this.foundEntryPointer.previous;
+				this.nextFoundEntryPointer = this.nextFoundEntryPointer.previous;
 
 				return ret;
 			}
 
-			this.foundEntryPointer = this.foundEntryPointer.previous;
+			this.nextFoundEntryPointer = this.nextFoundEntryPointer.previous;
 		}
 
-		this.foundEntryPointer = null;
+		this.nextFoundEntryPointer = null;
 
 		return null;
 	}
@@ -162,7 +162,7 @@ export class LinkedHashMapIterator {
 		}
 
 		this.foundEntry = null;
-		this.currentIterationValue = null;
+		this.nextEntryPointer = null;
 	}
 
 	/**
@@ -195,11 +195,11 @@ export class LinkedHashMapIterator {
 
 		if (
 			this.currentBucketIndex > 0 &&
-			this.currentIterationValue !== this.buckets[this.currentBucketIndex - 1]
+			this.nextEntryPointer !== this.buckets[this.currentBucketIndex - 1]
 		) {
-			ret = this.currentIterationValue;
+			ret = this.nextEntryPointer;
 
-			this.currentIterationValue = ret.previous;
+			this.nextEntryPointer = ret.previous;
 
 			return ret;
 		}
@@ -208,7 +208,7 @@ export class LinkedHashMapIterator {
 			ret = this.buckets[this.currentBucketIndex++].previous;
 
 			if (this.buckets[this.currentBucketIndex - 1] !== ret) {
-				this.currentIterationValue = ret.previous;
+				this.nextEntryPointer = ret.previous;
 
 				return ret;
 			}
