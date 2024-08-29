@@ -1,6 +1,9 @@
 import { describe, expect, test } from "vitest";
 
-import { LinkedHashEntry, LinkedHashMapIterator } from "./linked-hash-map.mjs";
+import {
+	LinkedHashEntry,
+	LinkedHashMapIterator,
+} from "./linked-hash-map-iterator.mjs";
 
 describe("linked-hash-map", () => {
 	test("should initialize a linked hash map with the correct size", () => {
